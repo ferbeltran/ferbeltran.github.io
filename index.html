@@ -2,335 +2,493 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kaiju — PCG Editor for KORG KRONOS and Nautilus</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kaiju · PCG Editor for KORG KRONOS and Nautilus</title>
 <meta name="description" content="Kaiju is a Mac app to import, organize and edit KORG KRONOS and Nautilus PCG files: sounds from any library, banks, set lists, Global and samples. Kaiju Live brings your set lists and the KRONOS panel to the iPad.">
-<meta property="og:title" content="Kaiju — PCG Editor for KORG KRONOS and Nautilus">
+<meta property="og:title" content="Kaiju · PCG Editor for KORG KRONOS and Nautilus">
 <meta property="og:description" content="Import sounds from any PCG with everything they need, organize banks, edit set lists. For Mac. Kaiju Live for iPad coming soon.">
 <meta property="og:image" content="img/kaiju-1.jpg">
 <link rel="icon" href="img/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Geist:wght@400..700&family=Geist+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@700&text=%E6%80%AA%E7%8D%A3&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="scrollcraft.css">
 <style>
 :root {
-  --bg: #0e1210; --bg2: #141a17; --panel: rgba(255,255,255,0.045); --line: rgba(255,255,255,0.09);
-  --text: #e9eee9; --dim: #9aa59d; --green: #73cc7a; --green-d: #4fa557; --red: #e5403a; --lilac: #e0ccff;
+  --sc-canvas: #0c100e;  --sc-surface: #151b18;
+  --sc-ink: #edf2ed;     --sc-ink-soft: #a1b2a6;
+  --sc-accent: #73cc7a;  --sc-accent-ink: #0b1a0d;
+  --sc-font-display: "Archivo", "Avenir Next", system-ui, sans-serif;
+  --sc-font-text: "Geist", system-ui, sans-serif;
+  --sc-font-mono: "Geist Mono", ui-monospace, monospace;
+  --sc-shadow-color: 150 30% 2%;
+  /* Not accents: the red belongs to the 怪獣 mark, the lilac is the light behind
+     a lit KRONOS 3 panel key, the coral marks a reference that points at the wrong sound. */
+  --mark: #e5403a; --led: #d9c4ff; --wrong: #ff7a6b;
+  --bar-h: 64px;
+  --sc-section: clamp(3.5rem, 6vw, 7rem);   /* tighter than the engine's default: less scrolling */
 }
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-a { color: var(--green); text-decoration: none; }
-img { max-width: 100%; display: block; }
-.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
-h1, h2, h3 { font-family: "Barlow Condensed", "Avenir Next Condensed", sans-serif; font-weight: 800; letter-spacing: 0.01em; line-height: 1.05; margin: 0; }
-h2 { font-size: clamp(34px, 5vw, 52px); }
-h3 { font-size: 26px; font-weight: 600; }
-.eyebrow { font: 600 13px/1 Inter, sans-serif; letter-spacing: 0.18em; text-transform: uppercase; color: var(--green); }
-.lead { color: var(--dim); font-size: 19px; max-width: 640px; }
 
-/* Language: show one, hide the other. */
 html[lang="en"] [lang="es"], html[lang="es"] [lang="en"] { display: none !important; }
+body { overflow-x: clip; }
+img { max-width: 100%; height: auto; display: block; }
+h1, h2, h3 { font-family: var(--sc-font-display); font-stretch: 112%; font-weight: 800; letter-spacing: var(--sc-track-snug); line-height: var(--sc-leading-tight); margin: 0; text-wrap: balance; }
+p { text-wrap: pretty; }
+.mono { font-family: var(--sc-font-mono); font-size: 0.78em; letter-spacing: 0.02em; }
 
-/* Top bar */
-.top { position: sticky; top: 0; z-index: 10; background: rgba(14,18,16,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
-.top .wrap { display: flex; align-items: center; gap: 24px; height: 64px; }
-.top img { height: 34px; width: auto; }
-.top nav { display: flex; gap: 22px; margin-left: auto; font-size: 15px; }
-.top nav a { color: var(--dim); }
-.top nav a:hover { color: var(--text); }
-.langs { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
-.langs button { background: none; border: 0; color: var(--dim); font: 600 13px Inter, sans-serif; padding: 6px 12px; cursor: pointer; }
-.langs button.on { background: var(--green); color: #0b1a0d; }
-@media (max-width: 760px) { .top nav { display: none; } .langs { margin-left: auto; } }
+/* ---------- Buttons ---------- */
+.btns { display: flex; flex-wrap: wrap; gap: var(--sc-3); margin-top: var(--sc-6); }
+.btn { display: inline-flex; align-items: center; gap: var(--sc-2); padding: 0.9rem 1.35rem; border-radius: var(--sc-r-md); font-weight: 600; font-size: var(--sc-t-base); text-decoration: none; white-space: nowrap; border: 1px solid transparent; transition: background var(--sc-d-fast) var(--sc-ease-out), transform 120ms var(--sc-ease-out); }
+.btn:active { transform: translateY(1px); }
+.btn--primary { background: var(--sc-accent); color: var(--sc-accent-ink); box-shadow: var(--sc-e1); }
+.btn--ghost { border-color: var(--sc-hairline-strong); color: var(--sc-ink); background: color-mix(in oklab, var(--sc-surface) 70%, transparent); }
+@media (hover: hover) and (pointer: fine) {
+  .btn--primary:hover { background: #8bd890; }
+  .btn--ghost:hover { border-color: color-mix(in oklab, var(--sc-ink) 40%, transparent); }
+}
+.btn small { font-weight: 500; opacity: 0.72; }
+:focus-visible { outline: 2px solid var(--sc-accent); outline-offset: 3px; border-radius: 4px; }
 
-/* Buttons */
-.btns { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 30px; }
-.btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 24px; border-radius: 12px; font-weight: 600; font-size: 16px; border: 1px solid transparent; transition: transform .12s, background .12s; }
-.btn:hover { transform: translateY(-1px); }
-.btn.primary { background: var(--green); color: #0b1a0d; }
-.btn.primary:hover { background: #86da8d; }
-.btn.ghost { border-color: var(--line); color: var(--text); background: var(--panel); }
-.btn small { font-weight: 500; opacity: 0.75; }
-.note { color: var(--dim); font-size: 14px; margin-top: 14px; }
+/* ---------- Bar: the mode keys are the navigation ---------- */
+.bar { position: fixed; inset: 0 0 auto; z-index: var(--sc-z-chrome); height: var(--bar-h); display: flex; align-items: center; gap: var(--sc-6); padding: 0 var(--sc-gutter); background: color-mix(in oklab, var(--sc-canvas) 92%, transparent); border-bottom: 1px solid var(--sc-hairline); }
+.bar__mark img { height: 30px; width: auto; }
+.keys { display: flex; gap: var(--sc-2); margin-left: auto; }
+.key { display: grid; justify-items: center; gap: 6px; text-decoration: none; color: var(--sc-ink-soft); padding: 4px 2px; }
+.key__label { font: 700 10px/1 var(--sc-font-display); font-stretch: 118%; letter-spacing: 0.12em; white-space: nowrap; transition: color var(--sc-d-fast) var(--sc-ease-out); }
+.key__cap { position: relative; display: block; width: 72px; height: 16px; border: 1px solid #000; border-radius: 2px;
+  /* Opaque bottom half, its edge where the light stops (as Kaiju Live's PanelKeyFace). */
+  background: linear-gradient(#0d0d0d, #040404); box-shadow: 0 2px 3px hsl(var(--sc-shadow-color) / 0.6); }
+/* Translucent top half: smoked glass, lit from behind when on. */
+.key__cap i { position: absolute; inset: 0 0 50% 0; overflow: hidden; border-bottom: 1px solid rgba(0,0,0,0.8);
+  background: linear-gradient(rgba(255,255,255,0.14), transparent), linear-gradient(#333, #1c1c1c); }
+.key__cap i::before { content: ""; position: absolute; inset: -2px 0;
+  background: radial-gradient(ellipse 42% 120% at 50% 30%, rgba(255,255,255,0.85), color-mix(in oklab, var(--led) 55%, transparent) 40%, color-mix(in oklab, var(--led) 12%, transparent) 75%, transparent);
+  filter: blur(1.5px); opacity: 0; transition: opacity 220ms var(--sc-ease-out); }
+/* A little light escaping over the top edge. */
+.key__cap::before { content: ""; position: absolute; left: 10%; right: 10%; top: -6px; height: 8px; border-radius: 50%;
+  background: color-mix(in oklab, var(--led) 35%, transparent); filter: blur(4px); opacity: 0; transition: opacity 220ms var(--sc-ease-out); }
+.key.is-trace .key__cap i::before { opacity: 0.4; }
+.key.is-on .key__cap i::before, .key.is-on .key__cap::before { opacity: 1; }
+.key.is-on .key__label { color: var(--sc-ink); }
+@media (hover: hover) and (pointer: fine) { .key:hover .key__label { color: var(--sc-ink); } }
+.langs { display: flex; border: 1px solid var(--sc-hairline-strong); border-radius: var(--sc-r-sm); overflow: hidden; }
+.langs button { background: none; border: 0; color: var(--sc-ink-soft); font: 600 12px var(--sc-font-text); padding: 6px 10px; cursor: pointer; }
+.langs button.on { background: var(--sc-ink); color: var(--sc-canvas); }
 
-/* Hero */
-.hero { padding: 72px 0 40px; position: relative; overflow: hidden; }
-.hero .grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: center; }
-.hero .logo { width: min(460px, 90%); height: auto; margin-bottom: 26px; }
-.hero h1 { font-size: clamp(40px, 6vw, 68px); }
-.hero h1 em { font-style: normal; color: var(--green); }
-.hero .mascot { width: 100%; max-width: 420px; margin: 0 auto; filter: drop-shadow(0 30px 50px rgba(0,0,0,0.5)); }
-.shot { margin-top: 56px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 40px 90px rgba(0,0,0,0.55); }
-@media (max-width: 860px) { .hero .grid { grid-template-columns: 1fr; } .hero .mascot { max-width: 260px; } }
+@media (max-width: 860px) {
+  :root { --bar-h: 56px; }
+  .bar { gap: var(--sc-4); }
+  .bar__mark img { height: 26px; }
+  .langs { margin-left: auto; }
+  /* On a phone the mode keys move to the bottom, under the thumb. */
+  .keys { position: fixed; inset: auto 0 0; z-index: var(--sc-z-chrome); margin: 0; justify-content: space-around; gap: 0;
+    padding: 8px 6px calc(8px + env(safe-area-inset-bottom)); background: color-mix(in oklab, var(--sc-canvas) 94%, transparent); border-top: 1px solid var(--sc-hairline); }
+  .key__cap { width: 52px; height: 14px; }
+  .key__label { font-size: 9px; letter-spacing: 0.06em; }
+  body { padding-bottom: 64px; }
+}
 
-/* Sections */
-section { padding: 90px 0; }
-section.alt { background: var(--bg2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.head { margin-bottom: 44px; }
-.head .lead { margin-top: 16px; }
-.feature { display: grid; grid-template-columns: 1fr 1.3fr; gap: 48px; align-items: center; margin-bottom: 80px; }
-.feature:last-child { margin-bottom: 0; }
-.feature.flip .text { order: 2; }
-.feature .text p { color: var(--dim); margin: 14px 0 0; }
-.feature ul { margin: 16px 0 0; padding-left: 20px; color: var(--dim); }
-.feature li { margin: 6px 0; }
-.feature img { border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 30px 70px rgba(0,0,0,0.45); }
-@media (max-width: 860px) { .feature { grid-template-columns: 1fr; gap: 24px; } .feature.flip .text { order: 0; } }
+/* ---------- 1 · Hero ---------- */
+.hero { position: relative; min-height: 100svh; display: grid; align-items: center; overflow: clip; padding: calc(var(--bar-h) + var(--sc-7)) 0 var(--sc-9); }
+.hero__scene { position: absolute; inset: 0; pointer-events: none; }
+.hero__scene > * { position: absolute; max-width: none; }
+.hero__kanji { right: 4vw; top: calc(var(--bar-h) + 2vh); writing-mode: vertical-rl; font: 700 min(38vh, 26vw)/0.92 "Noto Serif JP", serif; color: var(--mark); opacity: 0.16; letter-spacing: -0.02em; }
+.hero__moon { right: 15vw; top: 16vh; width: min(52vh, 36vw); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 42% 38%, #dfe8de 0%, #b9c7bb 58%, #93a497 100%); opacity: 0.12; }
+.hero__city { left: 0; right: 0; bottom: 0; width: 100%; }
+.hero__city--far { height: 40vh; color: #17201c; }
+.hero__city--near { height: 33vh; bottom: -4vh; color: #070a09; }
+.hero__mascot { right: 9vw; bottom: 5vh; width: min(66vh, 44vw); height: auto; filter: drop-shadow(0 24px 40px hsl(var(--sc-shadow-color) / 0.55)); }
+.hero__floor { left: 0; right: 0; bottom: 0; height: 18vh; background: linear-gradient(to bottom, transparent, var(--sc-canvas)); }
+.hero__copy { position: relative; z-index: 2; width: 100%; }
+.hero__copy > div { max-width: 34rem; }
+.hero h1 { font-size: clamp(2.4rem, 1.5rem + 2.9vw, 4.1rem); line-height: 1.0; letter-spacing: var(--sc-track-tight); }
+.hero h1 em { font-style: normal; color: var(--sc-accent); }
+.hero .lead { margin: var(--sc-5) 0 0; font-size: var(--sc-t-lg); line-height: 1.5; color: var(--sc-ink-soft); max-width: 30rem; }
+.note { margin: var(--sc-4) 0 0; font-size: var(--sc-t-sm); color: var(--sc-ink-soft); }
+@media (max-width: 1100px) { .hero__mascot { right: 3vw; width: min(60vh, 40vw); } .hero__copy > div { max-width: 30rem; } }
+@media (max-width: 760px) {
+  .hero { display: flex; flex-direction: column; align-items: stretch; padding-bottom: 0; }
+  .hero__copy { order: 1; }
+  .hero__scene { order: 2; }
+  .hero__copy > div { max-width: none; }
+  .hero h1 { font-size: 2.35rem; }
+  .hero .lead { font-size: var(--sc-t-base); }
+  .hero__scene { position: relative; height: 54svh; margin-top: var(--sc-5); }
+  .hero__kanji { right: 2vw; top: 0; font-size: 34vw; }
+  .hero__moon { right: 20vw; top: 4svh; width: 58vw; }
+  .hero__mascot { left: 0; right: 0; margin-inline: auto; bottom: 3svh; width: min(84vw, 44svh); }
+  .hero__city--far { height: 22svh; } .hero__city--near { height: 15svh; }
+}
 
-.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 26px; }
-.card h3 { font-size: 22px; margin-bottom: 8px; }
-.card p { color: var(--dim); margin: 0; font-size: 15px; }
-@media (max-width: 860px) { .cards { grid-template-columns: 1fr; } }
+/* ---------- 2 · The quiet before ---------- */
+.quiet { padding: var(--sc-8) 0 var(--sc-6); }
+.quiet p { font-family: var(--sc-font-display); font-stretch: 100%; font-weight: 600; font-size: var(--sc-t-xl); line-height: 1.25; max-width: 24ch; margin: 0; color: var(--sc-ink-soft); }
+.quiet p + p { margin-top: var(--sc-3); }
+.quiet p:last-child { color: var(--sc-ink); }
 
-/* Live */
-.live .badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(229,64,58,0.5); color: #ff8a84; font: 600 13px Inter, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
-.live .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 10px var(--red); }
-.live .logo { height: 70px; width: auto; margin: 22px 0 18px; }
-.gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 40px; }
-.gallery img { border-radius: 12px; border: 1px solid var(--line); }
-@media (max-width: 860px) { .gallery { grid-template-columns: 1fr; } }
-.store { display: inline-flex; align-items: center; gap: 12px; padding: 12px 20px; border-radius: 12px; border: 1px solid var(--line); color: var(--dim); background: var(--panel); margin-top: 26px; }
-.store svg { width: 22px; height: 22px; fill: currentColor; }
+/* ---------- 3 · Bring it whole (the peak): Kaiju's real Import window ---------- */
+.imp__stage { padding: calc(var(--bar-h) + var(--sc-6)) var(--sc-gutter) var(--sc-6); display: grid; grid-template-columns: minmax(15rem, 0.6fr) 2.2fr; gap: var(--sc-7); align-items: center; max-width: 92rem; margin: 0 auto; }
+.imp__steps { position: relative; min-height: 15rem; }
+.imp__step { position: absolute; inset: 0 0 auto 0; }
+.imp__step h2 { font-size: clamp(1.8rem, 1.2rem + 1.5vw, 2.8rem); }
+.imp__zooms { display: none; }
+.imp__step p { margin: var(--sc-4) 0 0; color: var(--sc-ink-soft); max-width: 30rem; }
+.imp__shot { position: relative; margin: 0; border-radius: var(--sc-r-md); overflow: hidden; box-shadow: var(--sc-edge), var(--sc-e3); }
+.imp__shot img { width: 100%; height: auto; }
+/* What each step points at, measured on the screenshot; the rest of the window dims. */
+.mark { position: absolute; border: 2px solid var(--sc-accent); border-radius: 6px; box-shadow: 0 0 0 200vmax rgba(5, 8, 6, 0.55); pointer-events: none; }
+.mark--lib  { left: 18.6%; top: 38.6%; width: 23.4%; height: 11.6%; }
+.mark--tabs { left: 43.8%; top: 18.4%; width: 48.6%; height: 4.6%; }
+.mark--dest { left: 44.6%; top: 31.6%; width: 54.2%; height: 12.6%; }
+@media (max-width: 860px) {
+  .imp__stage { grid-template-columns: 1fr; gap: var(--sc-5); align-content: center; padding: calc(var(--bar-h) + var(--sc-4)) var(--sc-4) calc(72px + var(--sc-4)); }
+  .imp__shot { display: none; }
+  /* On a phone the whole window is too small to read: each step shows its part of it, closer. */
+  .imp__zooms { display: block; position: relative; order: -1; aspect-ratio: 1.6; border-radius: var(--sc-r-md); overflow: hidden; box-shadow: var(--sc-edge), var(--sc-e3); }
+  .zoom { position: absolute; inset: 0; overflow: hidden; background: var(--sc-surface); }
+  .zoom__in { position: absolute; width: 182%; left: var(--x); top: 0; margin-top: var(--y); }
+  .zoom__in img { width: 100%; height: auto; max-width: none; }
+  .imp__steps { min-height: 13rem; }
+  .imp__step h2 { font-size: 1.6rem; }
+}
 
-/* Pricing */
-.price { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.plan { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 32px; }
-.plan.main { border-color: rgba(115,204,122,0.45); box-shadow: 0 0 0 1px rgba(115,204,122,0.15) inset; }
-.plan .amount { font: 800 54px/1 "Barlow Condensed", sans-serif; margin: 14px 0 4px; }
-.plan .amount small { font: 500 17px Inter, sans-serif; color: var(--dim); }
-.plan ul { padding-left: 20px; color: var(--dim); margin: 18px 0 0; }
-.plan li { margin: 6px 0; }
-@media (max-width: 860px) { .price { grid-template-columns: 1fr; } }
+/* ---------- 4 · Banks ---------- */
+.after-pin { padding-top: var(--sc-8); }
+.split { display: grid; grid-template-columns: 1fr 1.45fr; gap: var(--sc-8); align-items: center; }
+.split--flip { grid-template-columns: 1.45fr 1fr; }
+.split h2 { font-size: var(--sc-t-2xl); }
+.split .sc-body { color: var(--sc-ink-soft); margin: var(--sc-4) 0 0; max-width: 34rem; }
+.ticks { list-style: none; margin: var(--sc-5) 0 0; padding: 0; color: var(--sc-ink-soft); }
+.ticks li { padding: var(--sc-2) 0; border-top: 1px solid var(--sc-hairline); }
+.display { margin: 0; border-radius: var(--sc-r-md); overflow: hidden; box-shadow: var(--sc-edge), var(--sc-e3); background: var(--sc-surface); }
+.display img { width: 100%; height: auto; }
+@media (max-width: 860px) { .split, .split--flip { grid-template-columns: 1fr; gap: var(--sc-6); } .split--flip figure { order: 2; } }
 
-/* Service */
-.service { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 48px; align-items: center; }
-.service .steps { counter-reset: s; list-style: none; padding: 0; margin: 22px 0 0; }
-.service .steps li { counter-increment: s; position: relative; padding-left: 46px; margin: 16px 0; color: var(--dim); }
-.service .steps li::before { content: counter(s); position: absolute; left: 0; top: -2px; width: 30px; height: 30px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); color: var(--green); font-weight: 700; display: grid; place-items: center; font-size: 14px; }
-.service .steps b { color: var(--text); }
-.service img { max-width: 340px; margin: 0 auto; filter: drop-shadow(0 30px 50px rgba(0,0,0,0.5)); }
-@media (max-width: 860px) { .service { grid-template-columns: 1fr; } .service img { max-width: 220px; } }
+/* ---------- 5 · Set lists, Mac to stage ---------- */
+.rail { display: flex; align-items: center; gap: var(--sc-7); height: 100%; padding: var(--bar-h) var(--sc-gutter) 0; width: max-content; }
+.rail__lead { width: min(30rem, 80vw); }
+.rail__lead h2 { font-size: var(--sc-t-2xl); }
+.rail__lead p { color: var(--sc-ink-soft); }
+.shot { margin: 0; }
+.shot img { height: 54svh; width: auto; max-width: none; border-radius: var(--sc-r-md); box-shadow: var(--sc-edge), var(--sc-e3); }
+.shot figcaption { margin-top: var(--sc-4); max-width: 34rem; }
+.shot figcaption .lbl { margin: 0; font: 500 var(--sc-t-xs) var(--sc-font-mono); color: var(--sc-ink-soft); letter-spacing: 0.02em; }
+.shot figcaption h3 { font-size: var(--sc-t-lg); font-stretch: 105%; margin: 4px 0 0; }
+.shot figcaption p:last-child { margin: 4px 0 0; color: var(--sc-ink-soft); font-size: var(--sc-t-sm); }
+.rail__note { width: min(24rem, 80vw); }
+.rail__note img { width: 230px; height: auto; margin-bottom: var(--sc-4); }
+.rail__note p { color: var(--sc-ink-soft); margin: 0; }
+.rail__note p + p { margin-top: var(--sc-3); }
+@media (max-width: 860px) { .shot img { height: 36svh; } .rail { gap: var(--sc-5); padding-bottom: 64px; } .shot figcaption { max-width: 80vw; } }
+@media (prefers-reduced-motion: reduce) { .rail { height: auto; padding-top: calc(var(--bar-h) + var(--sc-5)); } }
 
-footer { padding: 46px 0 60px; color: var(--dim); font-size: 14px; border-top: 1px solid var(--line); }
-footer .wrap { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; align-items: center; }
-footer img { height: 28px; width: auto; }
-.fine { font-size: 12.5px; color: #6f7a72; margin-top: 10px; max-width: 760px; }
+/* ---------- 6 · Samples and Global ---------- */
+.ledger { margin: var(--sc-5) 0 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--sc-5); }
+@media (max-width: 1100px) { .ledger { grid-template-columns: 1fr; } }
+.ledger div { display: grid; grid-template-columns: 1fr; gap: var(--sc-1); padding: var(--sc-3) 0; border-top: 1px solid var(--sc-hairline); }
+.ledger dt { font-family: var(--sc-font-display); font-stretch: 108%; font-weight: 700; font-size: var(--sc-t-lg); }
+.ledger dd { margin: 0; color: var(--sc-ink-soft); max-width: var(--sc-measure); }
+
+/* ---------- 7 · Disk ---------- */
+.disk { min-height: calc(100svh - var(--bar-h)); display: grid; align-content: start; padding-top: var(--sc-7); padding-bottom: var(--sc-6); }
+.disk h2 { font-size: var(--sc-t-3xl); }
+.plans { display: grid; grid-template-columns: 1fr 1fr; margin-top: var(--sc-7); border-top: 1px solid var(--sc-hairline-strong); }
+.plan { padding: var(--sc-6) var(--sc-6) var(--sc-6) 0; }
+.plan + .plan { padding-left: var(--sc-6); border-left: 1px solid var(--sc-hairline-strong); }
+.plan h3 { font-size: var(--sc-t-lg); font-stretch: 105%; }
+.plan .amount { color: var(--sc-ink); font: 800 var(--sc-t-3xl)/1 var(--sc-font-display); font-stretch: 112%; letter-spacing: var(--sc-track-tight); margin: var(--sc-3) 0 0; font-variant-numeric: tabular-nums; }
+.plan .amount small { font: 500 var(--sc-t-base) var(--sc-font-text); color: var(--sc-ink-soft); letter-spacing: 0; }
+.plan p { color: var(--sc-ink-soft); margin: var(--sc-3) 0 0; max-width: 30rem; }
+.service { display: grid; grid-template-columns: auto 1fr; gap: var(--sc-5); align-items: center; padding: var(--sc-6) 0; border-top: 1px solid var(--sc-hairline-strong); }
+.service img { width: 92px; height: auto; }
+.service p { margin: 0; max-width: 46rem; color: var(--sc-ink-soft); }
+.service p b { color: var(--sc-ink); font-weight: 600; }
+.service a { color: var(--sc-accent); text-underline-offset: 3px; }
+.foot { display: flex; flex-wrap: wrap; gap: var(--sc-3) var(--sc-6); justify-content: space-between; align-items: center; padding-top: var(--sc-5); border-top: 1px solid var(--sc-hairline); font-size: var(--sc-t-sm); color: var(--sc-ink-soft); }
+.foot a { color: var(--sc-ink-soft); }
+.foot img { height: 26px; width: auto; }
+.fine { flex-basis: 100%; margin: 0; font-size: var(--sc-t-xs); color: color-mix(in oklab, var(--sc-ink-soft) 80%, var(--sc-canvas)); }
+@media (max-width: 760px) {
+  .plans { grid-template-columns: 1fr; }
+  .plan { padding: var(--sc-5) 0; }
+  .plan + .plan { padding-left: 0; border-left: 0; border-top: 1px solid var(--sc-hairline-strong); }
+  .service { grid-template-columns: 1fr; }
+  .service img { width: 72px; }
+}
 </style>
 </head>
 <body>
 
-<header class="top">
-  <div class="wrap">
-    <a href="#"><img src="img/logo.png" alt="Kaiju"></a>
-    <nav>
-      <a href="#features"><span lang="en">Features</span><span lang="es">Funciones</span></a>
-      <a href="#live">Kaiju Live</a>
-      <a href="#buy"><span lang="en">Buy</span><span lang="es">Comprar</span></a>
-      <a href="#service"><span lang="en">PCG service</span><span lang="es">Servicio de PCG</span></a>
-    </nav>
-    <div class="langs" role="group" aria-label="Language">
-      <button data-set="en">EN</button><button data-set="es">ES</button>
-    </div>
+<span data-sc-progress></span>
+<div class="sc-grain" aria-hidden="true"></div>
+
+<header class="bar">
+  <a class="bar__mark" href="#top"><img src="img/logo.png" width="900" height="297" alt="Kaiju PCG Editor"></a>
+  <nav class="keys" aria-label="Sections">
+    <a class="key" href="#combi" data-key="combi"><span class="key__label">COMBI</span><span class="key__cap"><i></i></span></a>
+    <a class="key" href="#prog" data-key="prog"><span class="key__label">PROG</span><span class="key__cap"><i></i></span></a>
+    <a class="key" href="#setlist" data-key="setlist"><span class="key__label">SET LIST</span><span class="key__cap"><i></i></span></a>
+    <a class="key" href="#sampling" data-key="sampling"><span class="key__label">SAMPLING</span><span class="key__cap"><i></i></span></a>
+    <a class="key" href="#global" data-key="global"><span class="key__label">GLOBAL</span><span class="key__cap"><i></i></span></a>
+    <a class="key" href="#disk" data-key="disk"><span class="key__label">DISK</span><span class="key__cap"><i></i></span></a>
+  </nav>
+  <div class="langs" role="group" aria-label="Language">
+    <button data-set="en">EN</button><button data-set="es">ES</button>
   </div>
 </header>
 
-<!-- Hero -->
-<div class="hero">
-  <div class="wrap">
-    <div class="grid">
+<main id="top">
+
+  <!-- 1 · Warmth: the monster at its keyboard, behind the city -->
+  <section class="hero" data-sc-act="flow" data-sc-drift="#0c100e">
+    <div class="hero__scene" aria-hidden="true">
+      <div class="hero__kanji" data-sc-parallax="2.6">怪獣</div>
+      <div class="hero__moon" data-sc-parallax="2"></div>
+      <svg class="hero__city hero__city--far" data-sc-parallax="1.2" data-city="far" preserveAspectRatio="xMidYMax slice"></svg>
+      <img class="hero__mascot" data-sc-parallax="0.5" src="img/Mascot-keys.png" width="900" height="900" alt="">
+      <svg class="hero__city hero__city--near" data-sc-parallax="-1" data-city="near" preserveAspectRatio="xMidYMax slice"></svg>
+      <div class="hero__floor"></div>
+    </div>
+    <div class="hero__copy sc-wrap">
       <div>
-        <img class="logo" src="img/logo.png" alt="怪獣 KAIJU PCG EDITOR">
         <h1 lang="en">Your KRONOS sounds, <em>organized</em>.</h1>
         <h1 lang="es">Los sonidos de tu KRONOS, <em>en orden</em>.</h1>
-        <p class="lead" lang="en">Kaiju is a Mac app for KORG KRONOS and Nautilus PCG files. Bring in sounds from any library with everything they need, tidy up your banks and build your set lists — without breaking a single reference.</p>
-        <p class="lead" lang="es">Kaiju es una app para Mac que trabaja con los archivos PCG de KORG KRONOS y Nautilus. Trae sonidos de cualquier librería con todo lo que necesitan, ordena tus bancos y arma tus set lists, sin romper ni una referencia.</p>
+        <p class="lead" lang="en">A Mac app for KRONOS and Nautilus PCG files: bring in sounds from any library, tidy your banks, build your set lists.</p>
+        <p class="lead" lang="es">Una app para Mac para los PCG de KRONOS y Nautilus: trae sonidos de cualquier librería, ordena tus bancos, arma tus set lists.</p>
         <div class="btns">
-          <a class="btn primary js-download" href="#">
-            <span lang="en">Download free trial</span><span lang="es">Descarga la prueba gratis</span>
-          </a>
-          <a class="btn ghost js-buy" href="#buy">
-            <span lang="en">Buy license</span><span lang="es">Comprar licencia</span> <small>$40</small>
-          </a>
+          <a class="btn btn--primary js-download" href="#"><span lang="en">Download free trial</span><span lang="es">Descarga la prueba gratis</span></a>
+          <a class="btn btn--ghost" href="#disk"><span lang="en">Buy license</span><span lang="es">Comprar licencia</span> <small>$40</small></a>
         </div>
-        <p class="note" lang="en">3-day trial with everything working · macOS 15 or later · Apple Silicon and Intel</p>
-        <p class="note" lang="es">Prueba de 3 días con todo funcionando · macOS 15 o posterior · Apple Silicon e Intel</p>
+        <p class="note" lang="en">3-day trial with everything working · macOS 15 or later · Apple silicon and Intel</p>
+        <p class="note" lang="es">Prueba de 3 días con todo funcionando · macOS 15 o posterior · Apple silicon e Intel</p>
       </div>
-      <img class="mascot" src="img/Mascot-keys.png" alt="">
     </div>
-    <div class="shot"><img src="img/kaiju-1.jpg" alt="Kaiju"></div>
-  </div>
-</div>
+  </section>
 
-<!-- Features -->
-<section id="features" class="alt">
-  <div class="wrap">
-    <div class="head">
-      <div class="eyebrow"><span lang="en">What it does</span><span lang="es">Qué hace</span></div>
-      <h2 lang="en">Everything the PCG keeps, in plain sight.</h2>
-      <h2 lang="es">Todo lo que guarda el PCG, a la vista.</h2>
+  <!-- 2 · Unease, in a lot of dark (authored silence before the peak) -->
+  <section class="quiet" data-mode="combi" data-sc-act="flow" data-sc-drift="#090c0b">
+    <div class="sc-wrap">
+      <p data-sc-in><span lang="en">You found a library you love.</span><span lang="es">Encontraste una librería que te encanta.</span></p>
+      <p data-sc-in><span lang="en">Your PCG is already full of your own sounds.</span><span lang="es">Tu PCG ya está lleno de tus propios sonidos.</span></p>
+      <p data-sc-in><span lang="en">Copy a combi across by hand, and it plays the wrong programs.</span><span lang="es">Copia una combi a mano y suena con los programas equivocados.</span></p>
     </div>
+  </section>
 
-    <div class="feature">
-      <div class="text">
-        <h3 lang="en">Find any sound, bring it in whole</h3>
-        <h3 lang="es">Encuentra cualquier sonido y tráelo completo</h3>
-        <p lang="en">Open your PCG next to a library and pick the combis and programs you want. Kaiju brings along every program, wave sequence, drum kit and sample bank they use, places them in free slots and points every reference at the right place.</p>
-        <p lang="es">Abre tu PCG junto a una librería y elige las combis y programas que quieres. Kaiju trae cada programa, wave sequence, drum kit y banco de samples que usan, los acomoda en slots libres y deja cada referencia apuntando a donde debe.</p>
+  <!-- 3 · The peak: a combi arrives with everything it needs (Kaiju's real Import window) -->
+  <section id="combi" class="imp" data-mode="combi" data-sc-act="pin" data-sc-span="2.7" data-sc-drift="#0b0f0d">
+    <div data-sc-stage class="imp__stage">
+      <div class="imp__steps">
+        <div class="imp__step" data-sc-cue="0 0.36 0">
+          <h2 lang="en">Pick the combis you want, from any PCG.</h2>
+          <h2 lang="es">Elige las combis que quieras, de cualquier PCG.</h2>
+          <p lang="en">Here, four combis from the KRONOS PRELOAD.</p>
+          <p lang="es">Aquí, cuatro combis del PRELOAD del KRONOS.</p>
+        </div>
+        <div class="imp__step" data-sc-cue="0.33 0.69">
+          <h2 lang="en">Kaiju finds everything they play.</h2>
+          <h2 lang="es">Kaiju encuentra todo lo que usan.</h2>
+          <p lang="en">61 programs, 5 wave sequences and a drum kit, without you looking for a single one.</p>
+          <p lang="es">61 programas, 5 wave sequences y un drum kit, sin que busques ni uno.</p>
+        </div>
+        <div class="imp__step" data-sc-cue="0.66 1 0.08 0.02">
+          <h2 lang="en">Each one in a free slot, still connected.</h2>
+          <h2 lang="es">Cada uno en un slot libre y conectado.</h2>
+          <p lang="en">Nothing in your PCG is overwritten, and every timbre keeps playing its own program.</p>
+          <p lang="es">No se sobrescribe nada de tu PCG, y cada timbre sigue sonando con su propio programa.</p>
+        </div>
       </div>
-      <img src="img/kaiju-2.jpg" alt="">
+      <div class="imp__zooms" aria-hidden="true">
+        <div class="zoom" data-sc-cue="0 0.36 0"><div class="zoom__in" style="--x:-27%;--y:-24%"><img src="img/import.jpg" width="1580" height="975" alt=""><span class="mark mark--lib"></span></div></div>
+        <div class="zoom" data-sc-cue="0.33 0.69"><div class="zoom__in" style="--x:-76%;--y:-9%"><img src="img/import.jpg" width="1580" height="975" alt=""><span class="mark mark--tabs"></span></div></div>
+        <div class="zoom" data-sc-cue="0.66 1 0.08 0.02"><div class="zoom__in" style="--x:-81%;--y:-16%"><img src="img/import.jpg" width="1580" height="975" alt=""><span class="mark mark--dest"></span></div></div>
+      </div>
+      <figure class="imp__shot">
+        <img src="img/import.jpg" width="1580" height="975" alt="Kaiju's Import window: four combis ticked in the PRELOAD library on the left; on the right, tabs counting 4 combis, 61 programs, 5 wave sequences and 1 drum kit, and each combi going to a free slot in bank U-C.">
+        <span class="mark mark--lib" data-sc-cue="0 0.36 0" aria-hidden="true"></span>
+        <span class="mark mark--tabs" data-sc-cue="0.33 0.69" aria-hidden="true"></span>
+        <span class="mark mark--dest" data-sc-cue="0.66 1 0.08 0.02" aria-hidden="true"></span>
+      </figure>
     </div>
+  </section>
 
-    <div class="feature flip">
-      <div class="text">
-        <h3 lang="en">Organize your banks</h3>
-        <h3 lang="es">Ordena tus bancos</h3>
-        <ul lang="en">
-          <li>Move, copy, paste and sort sounds — combis and set lists follow</li>
-          <li>Find duplicates and sounds nothing uses</li>
-          <li>Add banks, change HD-1 / EXi, compact what's scattered</li>
-          <li>See at a glance what you just added</li>
+  <!-- 4 · Control: the banks -->
+  <section id="prog" class="sc-section after-pin" data-mode="prog" data-sc-drift="#0d1210">
+    <div class="sc-wrap split">
+      <div data-sc-in data-sc-stagger="60">
+        <h2 lang="en">Banks you can find your way around.</h2>
+        <h2 lang="es">Bancos en los que te encuentras.</h2>
+        <p class="sc-body" lang="en">Every program, combi, wave sequence, drum kit and sample bank in the PCG, the way the KRONOS organizes them. Search thousands at once, or browse by bank, category and EXi engine.</p>
+        <p class="sc-body" lang="es">Cada programa, combi, wave sequence, drum kit y banco de samples del PCG, como los organiza el KRONOS. Busca entre miles a la vez o navega por banco, categoría y engine EXi.</p>
+        <ul class="ticks" lang="en">
+          <li>Move, copy, sort and compact: combis and set lists follow</li>
+          <li>Duplicates and sounds nothing uses, found for you</li>
+          <li>Add banks, switch HD-1 / EXi, see what you just added</li>
         </ul>
-        <ul lang="es">
-          <li>Mueve, copia, pega y ordena sonidos: las combis y los set lists los siguen</li>
-          <li>Encuentra duplicados y sonidos que nada usa</li>
-          <li>Agrega bancos, cambia HD-1 / EXi, compacta lo disperso</li>
-          <li>Ve de un vistazo lo que acabas de agregar</li>
+        <ul class="ticks" lang="es">
+          <li>Mueve, copia, ordena y compacta: las combis y los set lists los siguen</li>
+          <li>Duplicados y sonidos que nada usa, encontrados por ti</li>
+          <li>Agrega bancos, cambia HD-1 / EXi, ve lo que acabas de agregar</li>
         </ul>
       </div>
-      <img src="img/kaiju-3.jpg" alt="">
+      <figure class="display" data-sc-reveal="left" data-sc-reveal-at="0.12 0.48">
+        <img src="img/programs.jpg" width="1800" height="1128" alt="Kaiju's Programs tab: user banks across the top and a bank of 128 programs, one selected, with its slot, category, engines and samples on the right.">
+      </figure>
     </div>
+  </section>
 
-    <div class="feature">
-      <div class="text">
-        <h3 lang="en">Set lists, as the KRONOS shows them</h3>
-        <h3 lang="es">Set lists, como los muestra el KRONOS</h3>
-        <p lang="en">Drag slots around, copy them between set lists, pick colors and fonts, write the notes, and preview each slot exactly as it will look on the keyboard's screen. Kaiju warns you when a transposed slot would play a drum kit wrong.</p>
-        <p lang="es">Arrastra slots, cópialos entre set lists, elige colores y letras, escribe las notas y ve cada slot tal como se verá en la pantalla del teclado. Kaiju te avisa cuando un slot transpuesto haría sonar mal una batería.</p>
-      </div>
-      <img src="img/kaiju-4.jpg" alt="">
-    </div>
-
-    <div class="feature flip">
-      <div class="text">
-        <h3 lang="en">Your samples too</h3>
-        <h3 lang="es">También tus samples</h3>
-        <p lang="en">Drop WAV, AIFF, MP3, SFZ or SoundFont files and Kaiju builds a sample bank your KRONOS loads, each sample on its key. It also shows which sample banks each sound needs, turns multisamples into programs and copies what's needed to your USB drive when you save.</p>
-        <p lang="es">Suelta archivos WAV, AIFF, MP3, SFZ o SoundFont y Kaiju arma un banco de samples que tu KRONOS carga, cada sample en su tecla. También muestra qué bancos de samples necesita cada sonido, convierte multisamples en programas y copia lo necesario a tu USB al guardar.</p>
-      </div>
-      <img src="img/kaiju-5.jpg" alt="">
-    </div>
-
-    <div class="cards" style="margin-top: 70px">
-      <div class="card">
-        <h3 lang="en">KRONOS → Nautilus</h3><h3 lang="es">KRONOS → Nautilus</h3>
-        <p lang="en">Convert a KRONOS PCG for the Nautilus, sounds and set lists included.</p>
-        <p lang="es">Convierte un PCG del KRONOS para el Nautilus, con sonidos y set lists.</p>
-      </div>
-      <div class="card">
-        <h3 lang="en">Global settings</h3><h3 lang="es">Ajustes Global</h3>
-        <p lang="en">Velocity curve, pedals, controllers, category names and user scales.</p>
-        <p lang="es">Curva de velocity, pedales, controladores, nombres de categoría y escalas de usuario.</p>
-      </div>
-      <div class="card">
-        <h3 lang="en">Safe by design</h3><h3 lang="es">Seguro de origen</h3>
-        <p lang="en">Your original file is never touched until you save, with a backup of it kept every time.</p>
-        <p lang="es">Tu archivo original no se toca hasta que guardas, y siempre queda un respaldo.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Kaiju Live -->
-<section id="live" class="live">
-  <div class="wrap">
-    <span class="badge"><span lang="en">Coming soon</span><span lang="es">Próximamente</span></span>
-    <img class="logo" src="img/logo-live.png" alt="怪獣 KAIJU LIVE">
-    <h2 lang="en">Your KRONOS on the iPad, on stage.</h2>
-    <h2 lang="es">Tu KRONOS en el iPad, en el escenario.</h2>
-    <p class="lead" lang="en">Kaiju Live connects to your KRONOS over USB and shows your set lists as the keyboard does — tap a slot and the KRONOS follows. Edit slots on the iPad and they go straight to the keyboard. Joystick, Vector Joystick, ribbon, pads with each sound's chords, knobs, faders and KARMA scenes, right on the screen.</p>
-    <p class="lead" lang="es">Kaiju Live se conecta a tu KRONOS por USB y muestra tus set lists como el teclado: toca un slot y el KRONOS lo sigue. Edita slots en el iPad y pasan directo al teclado. Joystick, Vector Joystick, ribbon, pads con los acordes de cada sonido, knobs, faders y escenas de KARMA, en la pantalla.</p>
-    <div class="gallery">
-      <img src="img/live-1.jpg" alt="">
-      <img src="img/live-2.jpg" alt="">
-      <img src="img/live-3.jpg" alt="">
-    </div>
-    <div class="store">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.8-.9-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.3.9-1.3 1.3-2.6 1.3-2.6s-2.5-1-2.5-3.8zM14.1 5.8c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.7-1.1 1.8-1 2.9 1.1.1 2.1-.5 2.8-1.3z"/></svg>
-      <span lang="en">App Store — coming soon</span><span lang="es">App Store — próximamente</span>
-    </div>
-  </div>
-</section>
-
-<!-- Pricing -->
-<section id="buy" class="alt">
-  <div class="wrap">
-    <div class="head">
-      <div class="eyebrow"><span lang="en">Get Kaiju</span><span lang="es">Consigue Kaiju</span></div>
-      <h2 lang="en">Try it. Then keep it.</h2>
-      <h2 lang="es">Pruébalo. Luego quédatelo.</h2>
-    </div>
-    <div class="price">
-      <div class="plan">
-        <h3 lang="en">Free trial</h3><h3 lang="es">Prueba gratis</h3>
-        <div class="amount">3 <small lang="en">days</small><small lang="es">días</small></div>
-        <ul lang="en"><li>Every feature, saving included</li><li>No account, no card</li><li>After the trial your PCGs still open; activate to keep editing</li></ul>
-        <ul lang="es"><li>Todas las funciones, guardar incluido</li><li>Sin cuenta ni tarjeta</li><li>Después de la prueba tus PCG siguen abriendo; activa para seguir editando</li></ul>
-        <div class="btns"><a class="btn ghost js-download" href="#"><span lang="en">Download</span><span lang="es">Descargar</span></a></div>
-      </div>
-      <div class="plan main">
-        <h3 lang="en">Kaiju license</h3><h3 lang="es">Licencia de Kaiju</h3>
-        <div class="amount">$40 <small>USD</small></div>
-        <ul lang="en"><li>One payment, no subscription</li><li>Up to 3 devices — Mac, and iPad when Kaiju Live comes out</li><li>Free updates for Kaiju 1.x</li></ul>
-        <ul lang="es"><li>Un solo pago, sin suscripción</li><li>Hasta 3 dispositivos: Mac, y iPad cuando salga Kaiju Live</li><li>Actualizaciones gratis de Kaiju 1.x</li></ul>
-        <div class="btns"><a class="btn primary js-gumroad" href="#"><span lang="en">Buy license</span><span lang="es">Comprar licencia</span></a></div>
-        <p class="note" lang="en">Secure checkout by Gumroad. Your license key arrives by email.</p>
-        <p class="note" lang="es">Pago seguro con Gumroad. Tu clave de licencia te llega por correo.</p>
+  <!-- 5 · Anticipation: set lists travel from the Mac to the stage -->
+  <section id="setlist" data-mode="setlist" data-sc-act="pan" data-sc-span="2.6" data-sc-drift="#0b0f0e">
+    <div data-sc-stage>
+      <div class="rail" data-sc-pan="0.04">
+        <div class="rail__lead">
+          <h2 lang="en">Set lists, from the Mac to the stage.</h2>
+          <h2 lang="es">Set lists, del Mac al escenario.</h2>
+          <p lang="en">Plan them in Kaiju, play them on the KRONOS. Soon, run them from an iPad.</p>
+          <p lang="es">Planéalos en Kaiju y tócalos en el KRONOS. Pronto, también desde un iPad.</p>
+        </div>
+        <figure class="shot">
+          <img src="img/setlist.jpg" width="1800" height="1128" alt="Kaiju's Set Lists tab: slots four per row with colors, a transpose warning, and the slot's color, font size, volume and notes on the right.">
+          <figcaption>
+            <p class="lbl">Kaiju · Mac</p>
+            <h3 lang="en">Four slots a row</h3><h3 lang="es">Cuatro slots por fila</h3>
+            <p lang="en">Colors, notes, font size, volume and transpose for every slot. Kaiju warns you when a transposed slot would play a drum kit wrong.</p>
+            <p lang="es">Colores, notas, tamaño de letra, volumen y transpose en cada slot. Kaiju te avisa cuando un slot transpuesto haría sonar mal una batería.</p>
+          </figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/preview.jpg" width="1800" height="1128" alt="Preview on the KRONOS: a set list slot's notes shown at the size the keyboard's screen will show them.">
+          <figcaption>
+            <p class="lbl">Kaiju · Mac</p>
+            <h3 lang="en">Preview</h3><h3 lang="es">Vista previa</h3>
+            <p lang="en">Your notes at their real size on the KRONOS screen, before you save.</p>
+            <p lang="es">Tus notas al tamaño real de la pantalla del KRONOS, antes de guardar.</p>
+          </figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/live-1.jpg" width="1600" height="1200" alt="Kaiju Live on the iPad: a set list's sixteen slots, the selected one highlighted, with its notes above.">
+          <figcaption>
+            <p class="lbl" lang="en">Kaiju Live · iPad · coming soon</p><p class="lbl" lang="es">Kaiju Live · iPad · próximamente</p>
+            <h3>Play</h3>
+            <p lang="en">Tap a slot and the KRONOS follows, over USB.</p>
+            <p lang="es">Toca un slot y el KRONOS lo sigue, por USB.</p>
+          </figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/live-2.jpg" width="1600" height="1200" alt="Kaiju Live's Performance page: joystick, ribbon, eight chord pads and the Vector Joystick.">
+          <figcaption>
+            <p class="lbl" lang="en">Kaiju Live · iPad · coming soon</p><p class="lbl" lang="es">Kaiju Live · iPad · próximamente</p>
+            <h3 lang="en">Pads and joysticks</h3><h3 lang="es">Pads y joysticks</h3>
+            <p lang="en">Pads with each sound's chords, joystick, ribbon and Vector Joystick.</p>
+            <p lang="es">Pads con los acordes de cada sonido, joystick, ribbon y Vector Joystick.</p>
+          </figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/live-3.jpg" width="1600" height="1200" alt="Kaiju Live's Knobs and Sliders page: eight knobs, KARMA scene and switch keys, eight faders and master volume.">
+          <figcaption>
+            <p class="lbl" lang="en">Kaiju Live · iPad · coming soon</p><p class="lbl" lang="es">Kaiju Live · iPad · próximamente</p>
+            <h3 lang="en">Knobs and sliders</h3><h3 lang="es">Knobs y sliders</h3>
+            <p lang="en">The panel's knobs, faders and KARMA keys, on the screen.</p>
+            <p lang="es">Los knobs, faders y teclas de KARMA del panel, en la pantalla.</p>
+          </figcaption>
+        </figure>
+        <div class="rail__note">
+          <img src="img/logo-live.png" width="900" height="297" alt="Kaiju Live">
+          <p lang="en">Coming soon to the App Store.</p>
+          <p lang="es">Próximamente en la App Store.</p>
+          <p lang="en">Your Kaiju license activates it too.</p>
+          <p lang="es">Tu licencia de Kaiju también la activa.</p>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- PCG integration service -->
-<section id="service">
-  <div class="wrap service">
-    <div>
-      <div class="eyebrow"><span lang="en">PCG integration service</span><span lang="es">Servicio de integración de PCG</span></div>
-      <h2 lang="en">Rather not do it yourself? We'll organize your PCG for you.</h2>
-      <h2 lang="es">¿Prefieres no hacerlo tú? Organizamos tu PCG por ti.</h2>
-      <p class="lead" lang="en" style="margin-top:16px">Send us your PCG and tell us what you need: libraries merged into your setup, banks cleaned up, set lists built for your next gig, or a KRONOS PCG ready for the Nautilus.</p>
-      <p class="lead" lang="es" style="margin-top:16px">Mándanos tu PCG y dinos qué necesitas: librerías integradas a tu configuración, bancos ordenados, set lists armados para tu próximo show o un PCG del KRONOS listo para el Nautilus.</p>
-      <ol class="steps" lang="en">
-        <li><b>Write to us</b> with your keyboard model and what you'd like done.</li>
-        <li><b>We send you a quote</b> and a link to upload your PCG and libraries.</li>
-        <li><b>You get your PCG back</b>, ready to load, with notes on what changed.</li>
-      </ol>
-      <ol class="steps" lang="es">
-        <li><b>Escríbenos</b> con el modelo de tu teclado y lo que quieres.</li>
-        <li><b>Te mandamos una cotización</b> y un link para subir tu PCG y tus librerías.</li>
-        <li><b>Recibes tu PCG</b> listo para cargar, con notas de lo que cambió.</li>
-      </ol>
-      <div class="btns"><a class="btn primary js-mail" href="#"><span lang="en">Request a quote</span><span lang="es">Pedir cotización</span></a></div>
+  <!-- 6 · Trust: samples, Global, the rest -->
+  <section id="sampling" class="sc-section after-pin" data-mode="sampling" data-sc-drift="#0d1110">
+    <div class="sc-wrap">
+      <div class="split split--flip">
+        <figure class="display" data-sc-reveal="right" data-sc-reveal-at="0.1 0.42">
+          <img src="img/samplebuilder.jpg" width="1800" height="1145" alt="Kaiju's Sample Builder: seven piano samples spread across the keyboard, each with its keys, root, tune, level and loop.">
+        </figure>
+        <div data-sc-in data-sc-stagger="60">
+          <h2 lang="en">Your own samples too.</h2>
+          <h2 lang="es">También tus samples.</h2>
+          <p class="sc-body" lang="en">Drop WAV, AIFF, MP3, SFZ or SoundFont files and Kaiju builds a sample bank your KRONOS loads, each sample on its key. Trim, normalize, fade and loop, then turn them into programs in one step.</p>
+          <p class="sc-body" lang="es">Suelta archivos WAV, AIFF, MP3, SFZ o SoundFont y Kaiju arma un banco de samples que tu KRONOS carga, cada sample en su tecla. Recorta, normaliza, haz fades y loops, y conviértelos en programas en un paso.</p>
+        </div>
+      </div>
     </div>
-    <img src="img/Mascot.png" alt="">
-  </div>
-</section>
+  </section>
 
-<footer>
-  <div class="wrap">
-    <img src="img/logo.png" alt="Kaiju">
-    <div>
-      <a class="js-mail" href="#"><span lang="en">Contact</span><span lang="es">Contacto</span></a>
-      · <a class="js-gumroad" href="#">Gumroad</a>
+  <section id="global" class="sc-section global" data-mode="global" data-sc-drift="#0c110f">
+    <div class="sc-wrap split">
+      <div data-sc-in data-sc-stagger="60">
+      <h2 lang="en">Global, and the rest of the PCG.</h2>
+      <h2 lang="es">Global, y el resto del PCG.</h2>
+      <dl class="ledger">
+        <div><dt>Global</dt>
+          <dd lang="en">Velocity curve, pedals, controllers, category names and user scales.</dd>
+          <dd lang="es">Curva de velocity, pedales, controladores, nombres de categoría y escalas de usuario.</dd></div>
+        <div><dt>KRONOS → Nautilus</dt>
+          <dd lang="en">Convert a KRONOS PCG for the Nautilus, sounds and set lists included.</dd>
+          <dd lang="es">Convierte un PCG del KRONOS para el Nautilus, con sonidos y set lists.</dd></div>
+        <div><dt lang="en">Safe</dt><dt lang="es">Seguro</dt>
+          <dd lang="en">Your original file is never touched until you save. Saving over a file keeps a backup, and every change is one Undo.</dd>
+          <dd lang="es">Tu archivo original no se toca hasta que guardas. Guardar encima deja un respaldo, y cada cambio es un Deshacer.</dd></div>
+        <div><dt lang="en">Works with</dt><dt lang="es">Funciona con</dt>
+          <dd lang="en">KRONOS, KRONOS X, KRONOS 2, KRONOS 3 and Nautilus .PCG files. macOS 15 or later, Apple silicon and Intel.</dd>
+          <dd lang="es">Archivos .PCG de KRONOS, KRONOS X, KRONOS 2, KRONOS 3 y Nautilus. macOS 15 o posterior, Apple silicon e Intel.</dd></div>
+      </dl>
+      </div>
+      <figure class="display" data-sc-reveal="left" data-sc-reveal-at="0.1 0.42">
+        <img src="img/global.jpg" width="1800" height="1128" alt="Kaiju's Global tab: basic setup, KARMA and system preferences on the left; foot switch, pedal and MIDI CC assignments on the right.">
+      </figure>
     </div>
-  </div>
-  <div class="wrap">
-    <p class="fine" lang="en">KORG, KRONOS and Nautilus are trademarks of KORG Inc. Kaiju is an independent app, not made or endorsed by KORG.</p>
-    <p class="fine" lang="es">KORG, KRONOS y Nautilus son marcas de KORG Inc. Kaiju es una app independiente, no hecha ni respaldada por KORG.</p>
-  </div>
-</footer>
+  </section>
 
+  <!-- 7 · Resolve: take it home. Last element on the page. -->
+  <section id="disk" class="sc-section disk" data-mode="disk" data-sc-act="flow" data-sc-drift="#0c100e">
+    <div class="sc-wrap">
+      <div data-sc-in data-sc-stagger="70">
+        <h2 lang="en">Try it. Then keep it.</h2>
+        <h2 lang="es">Pruébalo. Luego quédatelo.</h2>
+        <div class="plans">
+          <div class="plan">
+            <h3 lang="en">Free trial</h3><h3 lang="es">Prueba gratis</h3>
+            <p class="amount">3 <small lang="en">days</small><small lang="es">días</small></p>
+            <p lang="en">Every feature, saving included. No account, no card. After the trial your PCGs still open; activate to keep editing.</p>
+            <p lang="es">Todas las funciones, guardar incluido. Sin cuenta ni tarjeta. Después de la prueba tus PCG siguen abriendo; activa para seguir editando.</p>
+            <div class="btns"><a class="btn btn--ghost js-download" href="#"><span lang="en">Download free trial</span><span lang="es">Descarga la prueba gratis</span></a></div>
+          </div>
+          <div class="plan">
+            <h3 lang="en">Kaiju license</h3><h3 lang="es">Licencia de Kaiju</h3>
+            <p class="amount">$40 <small>USD</small></p>
+            <p lang="en">One payment, no subscription. Up to 3 devices: Mac, and iPad when Kaiju Live comes out. Free updates for Kaiju 1.x.</p>
+            <p lang="es">Un solo pago, sin suscripción. Hasta 3 dispositivos: Mac, y iPad cuando salga Kaiju Live. Actualizaciones gratis de Kaiju 1.x.</p>
+            <div class="btns"><a class="btn btn--primary js-gumroad" href="#"><span lang="en">Buy license</span><span lang="es">Comprar licencia</span></a></div>
+            <p class="note" lang="en">Secure checkout by Gumroad. Your license key arrives by email.</p>
+            <p class="note" lang="es">Pago seguro con Gumroad. Tu clave de licencia te llega por correo.</p>
+          </div>
+        </div>
+        <div class="service">
+          <img src="img/Mascot.png" width="900" height="900" alt="">
+          <p lang="en"><b>Rather not do it yourself?</b> Send us your PCG and tell us what you need: libraries merged into your setup, banks cleaned up, set lists for your next gig, or a KRONOS PCG ready for the Nautilus. We'll send a quote. <a class="js-mail" href="#">Request a quote</a></p>
+          <p lang="es"><b>¿Prefieres no hacerlo tú?</b> Mándanos tu PCG y dinos qué necesitas: librerías integradas a tu configuración, bancos ordenados, set lists para tu próximo show o un PCG del KRONOS listo para el Nautilus. Te mandamos una cotización. <a class="js-mail" href="#">Pedir cotización</a></p>
+        </div>
+      </div>
+      <footer class="foot">
+        <img src="img/logo.png" width="900" height="297" alt="Kaiju">
+        <span><a class="js-mail" href="#"><span lang="en">Contact</span><span lang="es">Contacto</span></a> · <a class="js-gumroad" href="#">Gumroad</a></span>
+        <p class="fine" lang="en">KORG, KRONOS and Nautilus are trademarks of KORG Inc. Kaiju is an independent app, not made or endorsed by KORG.</p>
+        <p class="fine" lang="es">KORG, KRONOS y Nautilus son marcas de KORG Inc. Kaiju es una app independiente, no hecha ni respaldada por KORG.</p>
+      </footer>
+    </div>
+  </section>
+
+</main>
+
+<script src="scrollcraft.js"></script>
 <script>
 // Links in one place.
 const LINKS = {
@@ -340,6 +498,7 @@ const LINKS = {
 };
 // The address is put together here, so it isn't in the page for spam robots to read.
 const MAIL = ["ferbeltran", "icloud.com"].join("@");
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function mailLink(es) {
   const subject = es ? "Kaiju – Servicio de integración de PCG" : "Kaiju – PCG integration service";
@@ -349,20 +508,90 @@ function mailLink(es) {
   return "mailto:" + MAIL + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
 }
 
+// ---------------------------------------------------------------------------
+// The city in front of and behind the monster. Seeded, so it is the same city every visit.
+function city(svg, seed, near) {
+  let s = seed;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const W = 1600, H = near ? 300 : 340;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  let x = -10, out = "";
+  while (x < W) {
+    const w = 34 + rnd() * (near ? 70 : 54);
+    // Low behind the copy on the left, tall in front of the monster on the right.
+    const k = Math.min(1, Math.max(0, (x / W - 0.3) / 0.25));
+    const h = near ? (40 + rnd() * 50) * (1 - k) + (205 + rnd() * 70) * k : 110 + rnd() * 200;
+    out += `<rect x="${x.toFixed(1)}" y="${(H - h).toFixed(1)}" width="${(w + 1).toFixed(1)}" height="${h.toFixed(1)}" fill="currentColor"/>`;
+    if (near) {
+      for (let wy = H - h + 12; wy < H - 10; wy += 16)
+        for (let wx = x + 8; wx < x + w - 10; wx += 13)
+          if (rnd() < 0.07) out += `<rect x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" width="5" height="7" fill="#c9dccb" opacity="0.45"/>`;
+    }
+    x += w + (rnd() < 0.3 ? 6 + rnd() * 18 : 0);
+  }
+  svg.innerHTML = out;
+}
+city(document.querySelector('[data-city="far"]'), 7, false);
+city(document.querySelector('[data-city="near"]'), 31, true);
+
+// ---------------------------------------------------------------------------
+// The mode keys: the current section's key is lit, passed ones keep a trace.
+// Reaching DISK lights them all, left to right.
+const keys = [...document.querySelectorAll(".key")];
+const modes = [...document.querySelectorAll("[data-mode]")];
+const visited = new Set();
+let current = null, swept = false;
+function trackMode() {
+  const line = innerHeight * 0.45;
+  let m = null;
+  for (const el of modes) {
+    const r = el.getBoundingClientRect();
+    if (r.top <= line && r.bottom > line) m = el.dataset.mode;
+  }
+  if (scrollY + innerHeight >= document.documentElement.scrollHeight - 4) m = "disk";
+  if (m === current) return;
+  current = m;
+  if (m) visited.add(m);
+  keys.forEach((k) => {
+    k.classList.toggle("is-on", k.dataset.key === m);
+    k.classList.toggle("is-trace", visited.has(k.dataset.key) && k.dataset.key !== m);
+    if (k.dataset.key === m) k.setAttribute("aria-current", "true"); else k.removeAttribute("aria-current");
+  });
+  if (m === "disk" && !swept) {
+    swept = true;
+    keys.forEach((k, i) => setTimeout(() => { visited.add(k.dataset.key); if (k.dataset.key !== "disk") k.classList.add("is-trace"); }, REDUCED ? 0 : 70 * i));
+  }
+}
+addEventListener("scroll", trackMode, { passive: true });
+// In-page links jump instead of gliding: a smooth scroll would race through the pinned acts above.
+document.querySelectorAll('a[href^="#"]').forEach((a) => a.addEventListener("click", (e) => {
+  const t = document.querySelector(a.getAttribute("href"));
+  if (!t) return;
+  e.preventDefault();
+  // Pinned acts already leave room for the bar inside their stage; other sections start under it.
+  const pinned = /^(pin|pan)$/.test(t.dataset.scAct || "");
+  const bar = pinned ? 0 : parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--bar-h"));
+  const top = a.getAttribute("href") === "#top" ? 0 : t.getBoundingClientRect().top + scrollY - bar;
+  scrollTo({ top, behavior: "instant" });
+  history.replaceState(null, "", a.getAttribute("href"));
+}));
+
+// ---------------------------------------------------------------------------
 function setLang(l) {
   document.documentElement.lang = l;
-  document.querySelectorAll(".langs button").forEach(b => b.classList.toggle("on", b.dataset.set === l));
-  document.querySelectorAll(".js-mail").forEach(a => a.href = mailLink(l === "es"));
+  document.querySelectorAll(".langs button").forEach((b) => b.classList.toggle("on", b.dataset.set === l));
+  document.querySelectorAll(".js-mail").forEach((a) => (a.href = mailLink(l === "es")));
   try { localStorage.setItem("kaiju-lang", l); } catch (e) {}
 }
-
-document.querySelectorAll(".js-gumroad").forEach(a => a.href = LINKS.gumroad);
-document.querySelectorAll(".js-download").forEach(a => a.href = LINKS.download);
-document.querySelectorAll(".langs button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.set)));
-
+document.querySelectorAll(".js-gumroad").forEach((a) => (a.href = LINKS.gumroad));
+document.querySelectorAll(".js-download").forEach((a) => (a.href = LINKS.download));
+document.querySelectorAll(".langs button").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.set)));
 let saved = null;
 try { saved = localStorage.getItem("kaiju-lang"); } catch (e) {}
 setLang(saved || ((navigator.language || "en").toLowerCase().startsWith("es") ? "es" : "en"));
+
+ScrollCraft.mount(document.body);
+trackMode();
 </script>
 </body>
 </html>
